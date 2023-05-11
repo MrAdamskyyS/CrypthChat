@@ -8,7 +8,8 @@
 
 <?import javafx.scene.control.Label?>
 <?import javafx.scene.text.Font?>
-<AnchorPane fx:id="ap_main" prefHeight="396" prefWidth="478" xmlns:fx="http://javafx.com/fxml/1" xmlns="http://javafx.com/javafx/17" fx:controller="sample.serversidechat.Controller">
+<AnchorPane fx:id="ap_main" prefHeight="396" prefWidth="478"
+            xmlns:fx="http://javafx.com/fxml/1" xmlns="http://javafx.com/javafx/17" fx:controller="sample.serversidechat.Controller">
     <children>
         <Button fx:id="button_send" layoutX="401.0" layoutY="338" text="Wyślij" />
         <TextField fx:id="tf_message" layoutX="30" layoutY="338" prefHeight="26" prefWidth="361" />

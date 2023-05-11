@@ -1,4 +1,4 @@
-package sample.serversidechat;
+package sample.clientsidechat;
 
 import javafx.application.Platform;
 import javafx.beans.value.ChangeListener;
@@ -10,6 +10,7 @@ import javafx.fxml.Initializable;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.control.Button;
+import javafx.scene.control.Label;
 import javafx.scene.control.ScrollPane;
 import javafx.scene.control.TextField;
 import javafx.scene.layout.HBox;
@@ -19,11 +20,11 @@ import javafx.scene.text.Text;
 import javafx.scene.text.TextFlow;
 
 import java.io.IOException;
-import java.net.ServerSocket;
+import java.net.Socket;
 import java.net.URL;
 import java.util.ResourceBundle;
 
-public class Controller  implements Initializable {
+public class Controller implements Initializable {
 
     @FXML
     private Button button_send;
@@ -34,16 +35,15 @@ public class Controller  implements Initializable {
     @FXML
     private ScrollPane sp_main;
 
-    private Server server;
+    private Client client;
 
     @Override
     public void initialize(URL url, ResourceBundle resourceBundle) {
 
         try{
-            server = new Server(new ServerSocket(9999));
+            client = new Client(new Socket("localhost", 9999));
         } catch (IOException e){
             e.printStackTrace();
-            System.out.println("Blad tworzenia serwera");
         }
 
         vbox_message.heightProperty().addListener(new ChangeListener<Number>() {
@@ -53,7 +53,7 @@ public class Controller  implements Initializable {
             }
         });
 
-        server.receiveMessageFromClient(vbox_message);
+        client.receiveMessageFromServer(vbox_message);
 
         button_send.setOnAction(new EventHandler<ActionEvent>() {
             @Override
@@ -74,18 +74,18 @@ public class Controller  implements Initializable {
                     hBox.getChildren().add(textFlow);
                     vbox_message.getChildren().add(hBox);
 
-                    server.sendMessageToClient(messageToSend);
+                    client.sendMessageToServer(messageToSend);
                     tf_message.clear();
                 }
             }
         });
     }
-    public static void addLabel(String messageFromClient, VBox vbox){
+    public static void addLabel(String messageFromServer, VBox vbox){
         HBox hBox = new HBox();
         hBox.setAlignment(Pos.CENTER_LEFT);
         hBox.setPadding(new Insets(5,5,5,10));
 
-        Text text = new Text(messageFromClient);
+        Text text = new Text(messageFromServer);
         TextFlow textFlow = new TextFlow(text);
 
         textFlow.setStyle("-fx-background-color: rgb(233,233,235);" + "-fx-background-radius: 20px;");
