@@ -17,10 +17,26 @@ import javafx.scene.layout.VBox;
 import javafx.scene.paint.Color;
 import javafx.scene.text.Text;
 import javafx.scene.text.TextFlow;
+import java.math.BigInteger;
+import java.nio.charset.StandardCharsets;
+import java.security.*;
+import java.security.interfaces.ECPublicKey;
+import java.security.spec.InvalidKeySpecException;
+import java.security.spec.X509EncodedKeySpec;
+import javax.crypto.*;
+import javax.crypto.interfaces.DHPublicKey;
+import javax.crypto.spec.DHParameterSpec;
+import javax.crypto.spec.SecretKeySpec;
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
+
 
 import java.io.IOException;
 import java.net.ServerSocket;
 import java.net.URL;
+import java.util.Arrays;
+import java.util.Base64;
 import java.util.ResourceBundle;
 
 public class Controller  implements Initializable {
@@ -36,15 +52,72 @@ public class Controller  implements Initializable {
 
     private Server server;
 
+    //Zmienne potrzebne do szyfrowania
+    private static boolean areKeysReceived;
+    private static String receivedPublicDHKey;
+    private static PublicKey receivedPublicRSAKey;
+    private String publicKeyString;
+    private KeyPairGenerator keyPairGeneratorServer;
+    private static KeyPair keyPair;
+    private DHPublicKey kluczPublicznyDH;
+    private static String secretKey;
+    private static String hash;
+    private static String decryptedRSAHash;
+    private PublicKey publicKey;
+    private static PrivateKey privateKey;
+    private String encryptHashRSA;
+    private static String decryptedMessage;
+    private static String receivedMessageHash;
+
     @Override
     public void initialize(URL url, ResourceBundle resourceBundle) {
 
-        try{
+        try {
             server = new Server(new ServerSocket(9999));
-        } catch (IOException e){
+
+        } catch (IOException e) {
             e.printStackTrace();
             System.out.println("Blad tworzenia serwera");
         }
+
+        Controller.areKeysReceived = false;
+
+
+        // Inicjalizacja generatora kluczy Diffie-Hellmana
+        keyPairGeneratorServer = null;
+        try {
+            keyPairGeneratorServer = KeyPairGenerator.getInstance("DiffieHellman");
+        } catch (NoSuchAlgorithmException e) {
+            e.printStackTrace();
+        }
+        // Wygenerowanie parametrów Diffie-Hellmana
+        keyPairGeneratorServer.initialize(2048); // Długość klucza w bitach
+
+        // Generowanie klucza prywatnego i publicznego
+        Controller.keyPair = keyPairGeneratorServer.generateKeyPair();
+        kluczPublicznyDH = (DHPublicKey) keyPair.getPublic();
+
+        // Kodowanie klucza publicznego do postaci Base64
+        publicKeyString = Base64.getEncoder().encodeToString(kluczPublicznyDH.getEncoded());
+
+        try {
+            KeyPair keyPair = generateRSAKeyPair();
+            publicKey = keyPair.getPublic();
+            Controller.privateKey = keyPair.getPrivate();
+
+            //System.out.println("Wygenerowano klucz publiczny RSA: " + publicKey);
+            //System.out.println("Wygenerowano klucz prywatny RSA: " + privateKey);
+        } catch (NoSuchAlgorithmException e) {
+            System.err.println("Nie można znaleźć algorytmu RSA.");
+        }
+
+        String publicKeyRSAString = Base64.getEncoder().encodeToString(publicKey.getEncoded());
+        System.out.println("Klucz publiczny RSA (w postaci Stringa): " + publicKeyRSAString);
+
+        String keys = publicKeyString + "," + publicKeyRSAString;
+        //System.out.println("POKA SOWE " + keys);
+
+        server.sendMessageToClient(keys);
 
         vbox_message.heightProperty().addListener(new ChangeListener<Number>() {
             @Override
@@ -59,44 +132,219 @@ public class Controller  implements Initializable {
             @Override
             public void handle(ActionEvent actionEvent) {
                 String messageToSend = tf_message.getText();
-                if(!messageToSend.isEmpty()){
+                if (!messageToSend.isEmpty()) {
                     HBox hBox = new HBox();
                     hBox.setAlignment(Pos.CENTER_RIGHT);
-                    hBox.setPadding(new Insets(5,5,5,10));
+                    hBox.setPadding(new Insets(5, 5, 5, 10));
 
                     Text text = new Text(messageToSend);
                     TextFlow textFlow = new TextFlow(text);
 
-                    textFlow.setStyle("-fx-color: rgb(239,242,255);" + "-fx-background-color: rgb(15,125,242);" + "-fx-background-radius: 20px;");
-                    textFlow.setPadding(new Insets(5,10,5,10));
+                    textFlow.setStyle("-fx-color: rgb(239,242,255);" + "-fx-background-color: rgb(207,153,6);" + "-fx-background-radius: 20px;");
+                    textFlow.setPadding(new Insets(5, 10, 5, 10));
                     text.setFill(Color.color(0.934, 0.945, 0.996));
+
+                    try {
+                        Controller.hash = calculateSHA256Hash(messageToSend);
+                    } catch (NoSuchAlgorithmException e) {
+                        e.printStackTrace();
+                    }
+                    System.out.println("SHA-256 Hash wiadomosci: " + hash);
+                    try {
+                        byte[] encryptedBytes = encryptRSA(hash, receivedPublicRSAKey);
+                        encryptHashRSA = Base64.getEncoder().encodeToString(encryptedBytes);
+                        System.out.println("Zaszyfrowany HASH: " + bytesToHex(encryptedBytes));
+                    } catch (Exception e) {
+                        e.printStackTrace();
+                    }
+
+                    try {
+                        byte[] secretKeyByte = Base64.getDecoder().decode(Controller.secretKey);
+                        SecretKey secretKey = new SecretKeySpec(secretKeyByte , 0, 16, "AES");
+                        Cipher cipher = Cipher.getInstance("AES/ECB/PKCS5Padding");
+                        cipher.init(Cipher.ENCRYPT_MODE, secretKey);
+                        byte[] encryptedMessage = cipher.doFinal(messageToSend.getBytes(StandardCharsets.UTF_8));
+                        String encryptMessageAES = Base64.getEncoder().encodeToString(encryptedMessage);
+                        System.out.println("Zaszyfrowana wiadomość AES: " + encryptMessageAES);
+
+                        String combined = encryptMessageAES + "," + encryptHashRSA;
+                        server.sendMessageToClient(combined);
+                        tf_message.clear();
+
+                    } catch (NoSuchPaddingException e) {
+                        e.printStackTrace();
+                    } catch (IllegalBlockSizeException e) {
+                        e.printStackTrace();
+                    } catch (NoSuchAlgorithmException e) {
+                        e.printStackTrace();
+                    } catch (BadPaddingException e) {
+                        e.printStackTrace();
+                    } catch (InvalidKeyException e) {
+                        e.printStackTrace();
+                    }
 
                     hBox.getChildren().add(textFlow);
                     vbox_message.getChildren().add(hBox);
 
-                    server.sendMessageToClient(messageToSend);
-                    tf_message.clear();
                 }
             }
         });
     }
-    public static void addLabel(String messageFromClient, VBox vbox){
+
+    public static byte[] encryptRSA(String plaintext, PublicKey publicKey) throws Exception {
+        Cipher cipher = Cipher.getInstance("RSA/ECB/PKCS1Padding");
+        cipher.init(Cipher.ENCRYPT_MODE, publicKey);
+        return cipher.doFinal(plaintext.getBytes(StandardCharsets.UTF_8));
+    }
+
+    public static String decryptRSA(byte[] encryptedBytes, PrivateKey privateKey) throws Exception {
+        Cipher cipher = Cipher.getInstance("RSA/ECB/PKCS1Padding");
+        cipher.init(Cipher.DECRYPT_MODE, privateKey);
+        byte[] decryptedBytes = cipher.doFinal(encryptedBytes);
+        return new String(decryptedBytes, StandardCharsets.UTF_8);
+    }
+
+    public static String calculateSHA256Hash(String message) throws NoSuchAlgorithmException {
+        MessageDigest digest = MessageDigest.getInstance("SHA-256");
+        byte[] encodedHash = digest.digest(message.getBytes(StandardCharsets.UTF_8));
+        return bytesToHex(encodedHash);
+    }
+
+    public static String bytesToHex(byte[] bytes) {
+        StringBuilder sb = new StringBuilder();
+        for (byte b : bytes) {
+            sb.append(String.format("%02x", b));
+        }
+        return sb.toString();
+    }
+
+    public static KeyPair generateRSAKeyPair() throws NoSuchAlgorithmException {
+        KeyPairGenerator keyPairGenerator = KeyPairGenerator.getInstance("RSA");
+        keyPairGenerator.initialize(2048); // Długość klucza (w bitach)
+        return keyPairGenerator.generateKeyPair();
+    }
+
+    public static void addLabel(String messageFromClient, VBox vbox) {
+        if (!areKeysReceived) {
+            String[] splittedKeys = messageFromClient.split(",");
+            Controller.receivedPublicDHKey = splittedKeys[0];
+            String receivedPublicRSAKeyTemp = splittedKeys[1];
+            byte[] publicKeyBytes = Base64.getDecoder().decode(receivedPublicRSAKeyTemp);
+
+            // Tworzenie specyfikacji klucza publicznego
+            X509EncodedKeySpec publicKeySpec = new X509EncodedKeySpec(publicKeyBytes);
+
+            // Tworzenie obiektu klucza publicznego RSA
+            KeyFactory keyFactory = null;
+            try {
+                keyFactory = KeyFactory.getInstance("RSA");
+                Controller.receivedPublicRSAKey = keyFactory.generatePublic(publicKeySpec);
+            } catch (NoSuchAlgorithmException e) {
+                e.printStackTrace();
+            } catch (InvalidKeySpecException e) {
+                e.printStackTrace();
+            }
+            generateSecretKey(receivedPublicDHKey);
+            Controller.areKeysReceived = true;
+            return;
+        }
+
+        String[] splittedKeys = messageFromClient.split(",");
+        String encryptedAESMessage = splittedKeys[0];
+        String encryptedRSAHash = splittedKeys[1];
+
+
         HBox hBox = new HBox();
         hBox.setAlignment(Pos.CENTER_LEFT);
-        hBox.setPadding(new Insets(5,5,5,10));
+        hBox.setPadding(new Insets(5, 5, 5, 10));
+        try {
+            // Dekoduj zaszyfrowaną wiadomość z formatu Base64
+            byte[] encryptedBytes = Base64.getDecoder().decode(encryptedAESMessage);
+            byte[] secretKeyByte = Base64.getDecoder().decode(Controller.secretKey);
+            SecretKey secretKey = new SecretKeySpec(secretKeyByte, 0, 16, "AES");
 
-        Text text = new Text(messageFromClient);
-        TextFlow textFlow = new TextFlow(text);
+            // Inicjalizuj obiekt klasy Cipher w trybie deszyfrowania
 
-        textFlow.setStyle("-fx-background-color: rgb(233,233,235);" + "-fx-background-radius: 20px;");
-        textFlow.setPadding(new Insets(5,10,5,10));
-        hBox.getChildren().add(textFlow);
+            Cipher cipher = Cipher.getInstance("AES/ECB/PKCS5Padding");
+            cipher.init(Cipher.DECRYPT_MODE, secretKey);
 
-        Platform.runLater(new Runnable() {
-            @Override
-            public void run() {
-                vbox.getChildren().add(hBox);
+            // Deszyfruj wiadomość
+            byte[] decryptedBytes = cipher.doFinal(encryptedBytes);
+
+            // Konwertuj zdeszyfrowane bajty na łańcuch znaków
+            Controller.decryptedMessage = new String(decryptedBytes, StandardCharsets.UTF_8);
+            //System.out.println("Odszyfrowana Wiadomosc AES: " + decryptedMessage);
+        } catch (NoSuchPaddingException e) {
+            e.printStackTrace();
+        } catch (IllegalBlockSizeException e) {
+            e.printStackTrace();
+        } catch (NoSuchAlgorithmException e) {
+            e.printStackTrace();
+        } catch (BadPaddingException e) {
+            e.printStackTrace();
+        } catch (InvalidKeyException e) {
+            e.printStackTrace();
+        }
+
+        try {
+            byte[] encryptedHashBytes = Base64.getDecoder().decode(encryptedRSAHash);
+            Controller.decryptedRSAHash = decryptRSA(encryptedHashBytes, Controller.privateKey);
+            //System.out.println("Odszyfrowana HASH RSA: " + decryptedRSAHash);
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+
+            try {
+                Controller.receivedMessageHash = calculateSHA256Hash(decryptedMessage);
+            } catch (NoSuchAlgorithmException e) {
+                e.printStackTrace();
             }
-        });
+            //System.out.println("co to za GOWNO JEBANE: " + receivedMessageHash);
+            //System.out.println("to jest hash przychodzacej wiadomosci LIKE: "+decryptedRSAHash);
+            if(receivedMessageHash.equals(decryptedRSAHash)) {
+                Text text = new Text(decryptedMessage);
+                TextFlow textFlow = new TextFlow(text);
+
+
+                textFlow.setStyle("-fx-text-fill: rgb(239,242,255);" + "-fx-background-color: rgb(48,47,44);" + "-fx-background-radius: 20px;");
+                textFlow.setPadding(new Insets(5, 10, 5, 10));
+                hBox.getChildren().add(textFlow);
+
+
+                Platform.runLater(new Runnable() {
+                    @Override
+                    public void run() {
+                        vbox.getChildren().add(hBox);
+                    }
+                });
+            }
+    }
+    public static void generateSecretKey(String receivedPublicDHKey) {
+        try {
+            // Dekodowanie klucza publicznego z Base64
+            byte[] receivedPublicKeyBytes = Base64.getDecoder().decode(receivedPublicDHKey);
+            X509EncodedKeySpec x509KeySpec = new X509EncodedKeySpec(receivedPublicKeyBytes);
+            KeyFactory keyFactory = KeyFactory.getInstance("DiffieHellman");
+            PublicKey receivedPublicKey = keyFactory.generatePublic(x509KeySpec);
+
+            // Inicjalizacja protokołu Diffie-Hellmana na drugiej stronie
+            KeyAgreement keyAgreement = KeyAgreement.getInstance("DiffieHellman");
+            keyAgreement.init(keyPair.getPrivate());
+
+            // Wykonanie fazy pierwszej protokołu Diffie-Hellmana
+            keyAgreement.doPhase(receivedPublicKey, true);
+
+            // Generowanie tajnego klucza
+            byte[] secretKeyByte = keyAgreement.generateSecret();
+            Controller.secretKey = new BigInteger(1, secretKeyByte).toString(16);
+            // Wyświetlenie tajnego klucza
+            //System.out.println("Tajny klucz: " + Controller.secretKey);
+        } catch (NoSuchAlgorithmException e) {
+            e.printStackTrace();
+        } catch (InvalidKeySpecException e) {
+            e.printStackTrace();
+        } catch (InvalidKeyException e) {
+            e.printStackTrace();
+        }
     }
 }

@@ -1,25 +1,25 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
 <?import javafx.scene.control.Button?>
+<?import javafx.scene.control.Label?>
 <?import javafx.scene.control.ScrollPane?>
 <?import javafx.scene.control.TextField?>
 <?import javafx.scene.layout.AnchorPane?>
 <?import javafx.scene.layout.VBox?>
-
-<?import javafx.scene.control.Label?>
 <?import javafx.scene.text.Font?>
-<AnchorPane fx:id="ap_main" prefHeight="396" prefWidth="478" xmlns:fx="http://javafx.com/fxml/1" xmlns="http://javafx.com/javafx/17" fx:controller="sample.clientsidechat.Controller">
+
+<AnchorPane fx:id="ap_main" prefHeight="396" prefWidth="478" style="-fx-background-color: #262a30;" xmlns="http://javafx.com/javafx/17" xmlns:fx="http://javafx.com/fxml/1" fx:controller="sample.clientsidechat.Controller">
     <children>
-        <Button fx:id="button_send" layoutX="401.0" layoutY="338" text="Wyślij" />
-        <TextField fx:id="tf_message" layoutX="30" layoutY="338" prefHeight="26" prefWidth="361" />
-        <ScrollPane fx:id="sp_main" fitToWidth="true" layoutX="30" layoutY="70" prefHeight="256" prefWidth="418">
+        <Button fx:id="button_send" layoutX="395.0" layoutY="335.0" style="-fx-background-color: #1b1e22; -fx-background-radius: 10; -fx-border-color: #cf9906; -fx-border-radius: 10; -fx-border-width: 3;" text="Wyślij" textFill="#cf9906" />
+        <TextField fx:id="tf_message" layoutX="30.0" layoutY="335.0" prefHeight="26" prefWidth="361" style="-fx-background-color: #1b1e22; -fx-border-width: 3; -fx-border-color: #cf9906; -fx-border-radius: 10; -fx-text-fill: #cf9906; -fx-background-radius: 10;" />
+        <ScrollPane fx:id="sp_main" fitToWidth="true" layoutX="30" layoutY="70" prefHeight="256" prefWidth="418" stylesheets="@style.css">
             <content>
-                <VBox fx:id="vbox_message" prefHeight="248" prefWidth="412" />
+                <VBox fx:id="vbox_message" prefHeight="248.0" prefWidth="310.0" style="-fx-background-color: #1b1e22; -fx-background-radius: 10; -fx-border-color: #cf9906; -fx-border-width: 3; -fx-border-radius: 10;" />
             </content>
         </ScrollPane>
-        <Label layoutX="180" layoutY="26" text="CrypthChat">
+        <Label layoutX="180" layoutY="26" text="CrypthChat" textFill="#cf9906">
             <font>
-                <Font name="Arial Rounded MT Bold" size="23"></Font>
+                <Font name="Arial Rounded MT Bold" size="23" />
             </font>
         </Label>
     </children>
