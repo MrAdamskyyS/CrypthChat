@@ -17,7 +17,7 @@
                 <VBox fx:id="vbox_message" prefHeight="248.0" prefWidth="310.0" style="-fx-background-color: #1b1e22; -fx-background-radius: 10; -fx-border-color: #cf9906; -fx-border-width: 3; -fx-border-radius: 10;" />
             </content>
         </ScrollPane>
-        <Label layoutX="180" layoutY="26" text="CrypthChat" textFill="#cf9906">
+        <Label layoutX="180" layoutY="26" text="CrypthChat by Adam Sobkowiak" textFill="#cf9906">
             <font>
                 <Font name="Arial Rounded MT Bold" size="23" />
             </font>
