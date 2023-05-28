@@ -9,8 +9,5 @@
         <module name="ServerSideChat" />
       </profile>
     </annotationProcessing>
-    <bytecodeTargetLevel>
-      <module name="ServerSideChat" target="0" />
-    </bytecodeTargetLevel>
   </component>
 </project>

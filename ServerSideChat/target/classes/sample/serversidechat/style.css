@@ -1,6 +1,7 @@
 .scroll-pane {
     -fx-background-color:  #262a30;
     -fx-background-radius: 10px;
+    -fx-color: rgb(225, 227, 235);
 }
 
 .scroll-bar:horizontal, .scroll-bar:vertical{

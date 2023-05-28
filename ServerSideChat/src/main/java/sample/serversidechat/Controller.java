@@ -74,7 +74,7 @@ public class Controller  implements Initializable {
 
         try {
             server = new Server(new ServerSocket(9999));
-
+            System.out.println("Uruchomiono serwer");
         } catch (IOException e) {
             e.printStackTrace();
             System.out.println("Blad tworzenia serwera");
@@ -95,18 +95,19 @@ public class Controller  implements Initializable {
 
         // Generowanie klucza prywatnego i publicznego
         Controller.keyPair = keyPairGeneratorServer.generateKeyPair();
+        System.out.println("Wygenerowano klucze Diffie-Hellman");
         kluczPublicznyDH = (DHPublicKey) keyPair.getPublic();
 
         // Kodowanie klucza publicznego do postaci Base64
         publicKeyString = Base64.getEncoder().encodeToString(kluczPublicznyDH.getEncoded());
+        System.out.println("Klucz publiczny DH (w postaci Stringa): " + publicKeyString);
 
         try {
             KeyPair keyPair = generateRSAKeyPair();
             publicKey = keyPair.getPublic();
             Controller.privateKey = keyPair.getPrivate();
 
-            //System.out.println("Wygenerowano klucz publiczny RSA: " + publicKey);
-            //System.out.println("Wygenerowano klucz prywatny RSA: " + privateKey);
+            System.out.println("Wygenerowano klucze RSA");
         } catch (NoSuchAlgorithmException e) {
             System.err.println("Nie można znaleźć algorytmu RSA.");
         }
@@ -115,7 +116,6 @@ public class Controller  implements Initializable {
         System.out.println("Klucz publiczny RSA (w postaci Stringa): " + publicKeyRSAString);
 
         String keys = publicKeyString + "," + publicKeyRSAString;
-        //System.out.println("POKA SOWE " + keys);
 
         server.sendMessageToClient(keys);
 
@@ -149,11 +149,11 @@ public class Controller  implements Initializable {
                     } catch (NoSuchAlgorithmException e) {
                         e.printStackTrace();
                     }
-                    System.out.println("SHA-256 Hash wiadomosci: " + hash);
+                    System.out.println("SHA-256 Hash wiadomosci do wyslania: " + hash);
                     try {
                         byte[] encryptedBytes = encryptRSA(hash, receivedPublicRSAKey);
                         encryptHashRSA = Base64.getEncoder().encodeToString(encryptedBytes);
-                        System.out.println("Zaszyfrowany HASH: " + bytesToHex(encryptedBytes));
+                        System.out.println("Zaszyfrowany przez RSA HASH: " + bytesToHex(encryptedBytes));
                     } catch (Exception e) {
                         e.printStackTrace();
                     }
@@ -231,6 +231,8 @@ public class Controller  implements Initializable {
             String receivedPublicRSAKeyTemp = splittedKeys[1];
             byte[] publicKeyBytes = Base64.getDecoder().decode(receivedPublicRSAKeyTemp);
 
+            System.out.println("Otrzymano klucze od Boba");
+
             // Tworzenie specyfikacji klucza publicznego
             X509EncodedKeySpec publicKeySpec = new X509EncodedKeySpec(publicKeyBytes);
 
@@ -273,7 +275,7 @@ public class Controller  implements Initializable {
 
             // Konwertuj zdeszyfrowane bajty na łańcuch znaków
             Controller.decryptedMessage = new String(decryptedBytes, StandardCharsets.UTF_8);
-            //System.out.println("Odszyfrowana Wiadomosc AES: " + decryptedMessage);
+            System.out.println("Odszyfrowana otrzymana wiadomosc AES: " + decryptedMessage);
         } catch (NoSuchPaddingException e) {
             e.printStackTrace();
         } catch (IllegalBlockSizeException e) {
@@ -289,7 +291,7 @@ public class Controller  implements Initializable {
         try {
             byte[] encryptedHashBytes = Base64.getDecoder().decode(encryptedRSAHash);
             Controller.decryptedRSAHash = decryptRSA(encryptedHashBytes, Controller.privateKey);
-            //System.out.println("Odszyfrowana HASH RSA: " + decryptedRSAHash);
+            System.out.println("Odszyfrowana przez RSA Hash otrzymanej wiadomosci: " + decryptedRSAHash);
         } catch (Exception e) {
             e.printStackTrace();
         }
@@ -299,14 +301,14 @@ public class Controller  implements Initializable {
             } catch (NoSuchAlgorithmException e) {
                 e.printStackTrace();
             }
-            //System.out.println("co to za GOWNO JEBANE: " + receivedMessageHash);
-            //System.out.println("to jest hash przychodzacej wiadomosci LIKE: "+decryptedRSAHash);
+
             if(receivedMessageHash.equals(decryptedRSAHash)) {
+                System.out.println("Hashe zgodne");
                 Text text = new Text(decryptedMessage);
                 TextFlow textFlow = new TextFlow(text);
 
 
-                textFlow.setStyle("-fx-text-fill: rgb(239,242,255);" + "-fx-background-color: rgb(48,47,44);" + "-fx-background-radius: 20px;");
+                textFlow.setStyle("-fx-background-color: rgb(48,47,44);" + "-fx-background-radius: 20px;");
                 textFlow.setPadding(new Insets(5, 10, 5, 10));
                 hBox.getChildren().add(textFlow);
 
@@ -338,7 +340,7 @@ public class Controller  implements Initializable {
             byte[] secretKeyByte = keyAgreement.generateSecret();
             Controller.secretKey = new BigInteger(1, secretKeyByte).toString(16);
             // Wyświetlenie tajnego klucza
-            //System.out.println("Tajny klucz: " + Controller.secretKey);
+            System.out.println("Wspólny klucz dla obu uzytkownikow: " + Controller.secretKey);
         } catch (NoSuchAlgorithmException e) {
             e.printStackTrace();
         } catch (InvalidKeySpecException e) {

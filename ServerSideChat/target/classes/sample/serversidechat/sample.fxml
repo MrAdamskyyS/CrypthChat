@@ -14,10 +14,10 @@
         <TextField fx:id="tf_message" layoutX="30.0" layoutY="335.0" prefHeight="26" prefWidth="361" style="-fx-background-color: #1b1e22; -fx-border-width: 3; -fx-border-color: #cf9906; -fx-border-radius: 10; -fx-text-fill: #cf9906; -fx-background-radius: 10;" />
         <ScrollPane fx:id="sp_main" fitToWidth="true" layoutX="30" layoutY="70" prefHeight="256" prefWidth="418" stylesheets="@style.css">
             <content>
-                <VBox fx:id="vbox_message" prefHeight="248.0" prefWidth="310.0" style="-fx-background-color: #1b1e22; -fx-background-radius: 10; -fx-border-color: #cf9906; -fx-border-width: 3; -fx-border-radius: 10;" />
+                <VBox fx:id="vbox_message" prefHeight="248.0" prefWidth="310.0" style="-fx-background-color: #1b1e22; -fx-background-radius: 10; -fx-border-color: #cf9906; -fx-border-width: 3; -fx-border-radius: 10; -fx-color: rgb(225, 227, 235);" />
             </content>
         </ScrollPane>
-        <Label layoutX="180" layoutY="26" text="CrypthChat by Adam Sobkowiak" textFill="#cf9906">
+        <Label layoutX="60" layoutY="26" text="CrypthChat by Adam Sobkowiak" textFill="#cf9906">
             <font>
                 <Font name="Arial Rounded MT Bold" size="23" />
             </font>
